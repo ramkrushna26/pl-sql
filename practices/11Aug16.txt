@@ -1,0 +1,396 @@
+1. Write a plsql block which accepts a city and prints the deptname, total salary, avg salary and num of emp working in each dept in that city. (Use Cursor FOR Loop)(Seattle)
+
+
+declare
+  vcity locations.city%type := '&city';
+  cursor c1 is select d.department_name, sum(e.salary) as sum_sal, 
+  round(avg(e.salary)) as avg_Sal, count(e.employee_id) as num_emp
+  from employees e join departments d on(e.department_id = d.department_id)
+  join locations l on(d.location_id = l.location_id) 
+  where lower(l.city) = lower(vcity)
+  group by d.department_name;
+begin
+  for x in c1
+  loop
+    dbms_output.put_line(x.department_name||' '|| x.sum_sal||' '|| x.avg_Sal||' '|| x.num_emp);
+  end loop;  
+end;
+
+-------------
+--Handling predefined unnamed exceptions
+declare 
+  vregionid regions.region_id%type := &regid;
+  vregname regions.region_name%type := '&regname';
+  null_reg EXCEPTION;
+  pragma exception_init(null_reg, -1400);
+begin
+  insert into regions values (vregionid, vregname);
+  dbms_output.put_line(SQL%rowcount||' region added');
+EXCEPTION
+  when null_reg then
+  dbms_output.put_line('region id cannot be null');
+end;
+
+
+
+-----------
+--Creating stored procedure
+create or replace procedure add_job
+(pjobid jobs.job_id%type, pjob_title jobs.job_title%type, 
+pminsal jobs.min_salary%type, pmaxsal jobs.max_Salary%type) is
+begin
+  insert into jobs values(pjobid, pjob_title, pminsal, pmaxsal);
+  dbms_output.put_line('Job added sucessfully');
+end;
+
+--executing stored procedure
+exec add_job('HR_MAN','Human Resource Manager', 10000, 50000)
+
+
+create or replace procedure get_name_sal 
+(pempid employees.employee_id%type) is
+  vfname employees.first_name%type;   vlname vfname%type;
+  vsal employees.salary%type;
+begin
+  select first_name, last_name, salary   into vfname, vlname, vsal
+  from employees where employee_id = pempid;
+  dbms_output.put_line(pempid||' '|| vfname||' '|| vlname||' '||vsal);
+exception
+  when no_data_found then dbms_output.put_line('No such employee found');
+end;
+
+
+2. Create a procedure name get_job_hdate which accepts an empid through input parameter and prints the jobid and hiredate of that empid
+
+create or replace procedure get_job_hdate
+(pempid employees.employee_id%type) is
+  vjob employees.job_id%type; 
+  vhdate date;
+begin
+  select job_id, hire_date into vjob, vhdate
+  from employees where employee_id = pempid;
+  dbms_output.put_line(pempid||' '|| vjob||' '|| vhdate);
+exception
+  when no_data_found then
+    dbms_output.put_line('No such employee found');
+end;
+
+--creating procedure with OUT mode parameters
+create or replace procedure get_name_sal 
+(pempid employees.employee_id%type,
+ pfname out employees.first_name%type,   
+  plname out employees.last_name%type,
+  psal out employees.salary%type) is
+begin
+  select first_name, last_name, salary   into pfname, plname, psal
+  from employees where employee_id = pempid;
+exception
+  when no_data_found then 
+  dbms_output.put_line('No such employee found');
+  pfname := 'X'; 
+  plname := 'X'; 
+  psal := 0;
+end;
+
+-----------
+declare
+  vempid number := &empid;
+  vfname varchar(25);
+  vlname varchar(25);
+  vsal number;
+begin
+ get_name_sal(vempid, vfname, vlname, vsal);
+ dbms_output.put_line(vempid||' '||vfname||' '||vlname||' '||vsal);
+end;
+
+3. Create a procedure named get_dname_city which accepts an empid as input parameter and returns the deptname and city of that empid through output parameters.
+
+create or replace procedure get_dname_city 
+(pempid employees.employee_id%type,
+pdname out departments.department_name%type,
+   pcity out locations.city%type) is
+begin
+  select d.department_name, l.city  into pdname, pcity
+  from employees e join departments d on(e.department_id = d.department_id)
+  join locations l on(d.location_id = l.location_id)
+  where e.employee_id = pempid;
+exception
+  when no_data_found then 
+  dbms_output.put_line('No such employee found');
+  pdname := 'X'; 
+  pcity := 'X'; 
+end;
+
+
+
+declare
+  vempid number := &empid;
+  vfname varchar(25);
+  vlname varchar(25);
+  vsal number;
+  vdname varchar(30);
+  vcity varchar(30);
+begin
+ get_name_sal(vempid, vfname, vlname, vsal);
+ get_dname_city(vempid, vdname, vcity);
+ dbms_output.put_line(vempid||' '||vfname||' '||vlname||' '||vsal||' '||vdname||' '||vcity);
+end;
+
+--creating procedure with IN OUT mode parameters
+create or replace procedure inc_sal
+(psal in out number, inc_percent NUMBER) is
+begin
+  psal := psal + psal * inc_percent/100;
+end;
+
+
+declare
+  vempid number := &empid;
+  vfname varchar(25);
+  vlname varchar(25);
+  vsal number;
+  vdname varchar(30);
+  vcity varchar(30);
+begin
+ get_name_sal(vempid, vfname, vlname, vsal);
+ get_dname_city(vempid, vdname, vcity);
+ dbms_output.put_line(vempid||' '||vfname||' '||vlname||' '||vdname||' '||vcity);
+ dbms_output.put_line('Current Salary '||vsal);
+ inc_sal(vsal, 10);
+ dbms_output.put_line('New Salary '||vsal);
+end;
+
+
+------------
+-- Creating User-defined Functions
+create or replace function calc_annual_Sal
+(pempid NUMBER) RETURN NUMBER is
+  vannual_sal NUMBER;
+begin
+  select salary * 12 into vannual_sal FROM employees 
+  where employee_id = pempid;
+  RETURN vannual_sal;
+exception
+  when no_data_found then
+  return 0;
+end;
+
+4. Create a function named calc_tax which returns the tax of a given empid
+Tax = salary * 10%
+
+5. Create a function named calc_pf which returns the PF  of a given empid
+PF = salary * 12%
+
+6. Create a function named calc_netsal which returns the netsal of a given empid. (Netsal = salary - Tax - PF)
+
+7. Create a procedure named get_emp_details which prints the following output for all employees
+
+Empid: xxx	Empname: xxxx xxxxxx	
+Working in Dept: xxxxxxxxx	Location: XXXX
+Salary: xxxxx	Tax: xxxx	PF: xxxxx	Net Salary:xxxxx
+
+Note: Call the previously created stored procedures and functions in the loop of the cursor to get the required details.
+
+
+
+
+
+
+create or replace function calc_tax
+(pempid NUMBER) RETURN NUMBER is
+  vtax NUMBER;
+begin
+  select salary * .1 into vtax FROM employees 
+  where employee_id = pempid;
+  RETURN vtax;
+exception
+  when no_data_found then
+  return 0;
+end;
+
+create or replace function calc_pf
+(pempid NUMBER) RETURN NUMBER is
+  vpf NUMBER;
+begin
+  select salary * .12 into vpf FROM employees 
+  where employee_id = pempid;
+  RETURN vpf;
+exception
+  when no_data_found then
+  return 0;
+end;
+
+
+create or replace function calc_netsal
+(pempid NUMBER) RETURN NUMBER is
+  vnetsal NUMBER;
+begin
+  select salary - calc_tax(employee_id) - calc_pf(employee_id) into vnetsal FROM employees 
+  where employee_id = pempid;
+  RETURN vnetsal;
+exception
+  when no_data_found then
+  return 0;
+end;
+
+create or replace procedure get_emp_details is
+  cursor c1 is select employee_id from employees;
+  vfname varchar(25);
+  vlname varchar(25);
+  vsal number;
+  vdname varchar(30);
+  vcity varchar(30);
+  vtax NUMBER;
+  vpf NUMBER;
+  vnetsal NUMBER;
+begin
+  for a in c1
+  loop
+ get_name_sal(a.employee_id, vfname, vlname, vsal);
+ get_dname_city(a.employee_id, vdname, vcity);
+ vtax := calc_tax(a.employee_id);
+ vpf := calc_pf(a.employee_id);
+ vnetsal := calc_netsal(a.employee_id);
+ dbms_output.put_line('Empid: '||a.employee_id||' Empname: '||vfname||' '||vlname);
+ dbms_output.put_line(' Working in Dept: '||vdname||'  Location: '||vcity);
+ dbms_output.put_line(' Salary: '||vsal||'	Tax: '|| vtax||'	PF: '|| vpf||'	Net Salary:'|| vnetsal);
+ end loop;
+end;
+
+exec get_emp_details
+
+--get parameter details of a procedure
+desc get_name_sal
+
+--get source code of a procedure
+select text from user_source where name = 'GET_NAME_SAL'
+
+----get status of a procedure
+select object_name, object_type, status 
+from user_objects where object_name = 'GET_NAME_SAL';
+
+
+
+8. Create a procedure named update_pcode which accepts a location id and a new postal code and updates the existing pcode of that location id with the new one.
+
+
+create or replace procedure update_pcode 
+(plocid NUMBER, pnewcode VARCHAR2) is
+begin
+  update locations set postal_code = pnewcode where location_id = plocid;
+  dbms_output.put_line('Postal Code Changed');
+end;
+
+exec update_pcode(1000, 97430)
+
+
+9. Create a function which accepts a countryid and returns the number of departments in that country.
+
+create or replace function num_depts (pconid CHAR) RETURN INTEGER is
+  i INTEGER;
+begin
+  select count(d.department_id) into i from departments d join locations l
+  on(d.location_id = l.location_id) join countries c on(l.country_id = c.country_id)
+  where lower(c.country_id) = lower(pconid);
+  RETURN i;
+exception
+  when no_data_found then
+  return 0;
+end;
+
+select country_id, country_name, num_depts(country_id) as num_dept from countries;
+
+--creating a package specification
+create or replace PACKAGE pack1 is
+  a NUMBER := 100;
+  procedure add_dept (pdeptid NUMBER, pdname VARCHAR2, pmgr NUMBER, ploc NUMBER);
+  procedure upd_dept (pdeptid NUMBER, pdname VARCHAR2);
+  procedure del_dept (pdeptid NUMBER);
+  function get_num_emp (pdeptid NUMBER) RETURN INTEGER;
+end pack1;
+
+--creating package body
+create or replace PACKAGE body pack1 is
+  flag boolean;
+  function chk_dept(pdeptid number) return boolean is
+    i integer;
+  begin
+    select count(department_id) into i from departments where department_id = pdeptid;
+    if i = 0 then return false;
+    else return true; end if;
+  end chk_dept;
+  procedure add_dept (pdeptid NUMBER, pdname VARCHAR2, pmgr NUMBER, ploc NUMBER) is
+  begin
+    flag := chk_dept(pdeptid);
+    if flag then dbms_output.put_line('This dept already exists.. Try again');
+    else insert into departments values (pdeptid, pdname, pmgr, ploc);
+    dbms_output.put_line('Dept added sucessfully');
+    end if;
+  end add_dept;
+  procedure upd_dept (pdeptid NUMBER, pdname VARCHAR2) is
+  begin
+    flag := chk_dept(pdeptid);
+    if not flag then dbms_output.put_line('This dept does not exists.. Try again');
+    else update departments set department_name = pdname where department_id = pdeptid;
+    dbms_output.put_line('Deptname changed sucessfully');
+    end if;
+  end upd_dept;
+  procedure del_dept (pdeptid NUMBER) is
+  begin
+    flag := chk_dept(pdeptid);
+    if not flag then dbms_output.put_line('This dept does not exists.. Try again');
+    else delete from  departments where department_id = pdeptid;
+    dbms_output.put_line('Dept deleted sucessfully');
+    end if;
+  end del_dept;
+  function get_num_emp (pdeptid NUMBER) RETURN INTEGER is
+    num INTEGER;
+  begin
+     flag := chk_dept(pdeptid);
+    if not flag then RETURN 0;
+    else select count(employee_id) into num from employees where department_id = pdeptid;
+    return num;
+    end if;
+  end get_num_emp;
+end pack1;
+
+
+
+
+exec pack1.add_dept(280, 'IT',200, 1700)
+
+exec pack1.upd_dept(280, 'Sales')
+exec pack1.upd_dept(290, 'Sales')
+
+exec pack1.del_dept(280)
+
+select department_id, department_name, pack1.get_num_emp(department_id) as num_emp from departments;
+
+
+
+
+
+
+
+Secnario :-	create a procedure which accept a date and returns the Emp ID, Fullname,
+		Joining date, Dept name, city of all employees 
+		which have joined before that date. Return the date using out mode parameter 
+		of array type
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

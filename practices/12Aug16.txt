@@ -1,0 +1,374 @@
+create or replace procedure get_name_sal 
+(pempid employees.employee_id%type,
+ pfname out employees.first_name%type,   
+  plname out employees.last_name%type,
+  psal out employees.salary%type) is
+begin
+  select first_name, last_name, salary   into pfname, plname, psal
+  from employees where employee_id = pempid;
+exception
+  when no_data_found then 
+  dbms_output.put_line('No such employee found');
+  pfname := 'X'; 
+  plname := 'X'; 
+  psal := 0;
+end;
+
+
+declare
+  type char_array is table of varchar(25) index by binary_integer;
+  arr1 char_array;
+  cursor c1 is select  salary from employees;
+  --vfname employees.first_name%type;
+  i INTEGER := 1;
+begin
+  open c1;
+  loop
+    fetch c1 into arr1(i);
+    exit when c1%notfound;
+    i := i+1;
+  end loop;
+  close c1;
+  
+  for n in 1..arr1.count
+  loop
+    dbms_output.put_line(arr1(n));
+  end loop;
+end;
+
+
+
+declare
+  type tab_type is table of employees%rowtype index by binary_integer;
+  arr1 tab_type;
+  cursor c1 is select * from employees ;
+  i INTEGER := 1;
+begin
+  open c1;
+  loop
+    fetch c1 into arr1(i) ;
+    exit when c1%notfound;
+    i := i+1;
+  end loop;
+  close c1;
+  for n in 1..arr1.count
+  loop
+    dbms_output.put_line(arr1(n).employee_id||' '|| arr1(n).department_id||' '||arr1(n).job_id);
+  end loop;
+end;
+
+
+declare
+  vcountry countries.country_name%type := '&country';
+  cursor c1 is select e.first_name, e.department_id, d.department_name, 
+  l.city, l.state_province, l.postal_code
+  from employees e join departments d on(e.department_id = d.department_id)
+  join locations l on(d.location_id = l.location_id) 
+  join countries c on(l.country_id = c.country_id)
+  where lower(c.country_name) = lower(vcountry);
+  type cur_type is table of c1%rowtype index by binary_integer;
+  tab1 cur_type;
+  i INTEGER := 1;
+begin
+  for x in c1
+  loop
+    tab1(i) := x;
+    i := i+1;
+  end loop;  
+  for x in 1..tab1.count
+  loop
+  dbms_output.put_line(tab1(x).first_name||' '|| tab1(x).department_id||' '|| tab1(x).department_name
+    ||' '|| tab1(x).city||' '|| tab1(x).state_province||' '|| tab1(x).postal_code);
+  end loop;
+end;
+
+
+create or replace package type_pack is 
+  type rec_type is RECORD 
+  (first_name varchar(25), department_id number(4), department_name varchar(30), 
+  city varchar(30), state_province varchar(30), postal_code varchar(16));
+  type cur_type is table of rec_type index by binary_integer;
+end type_pack;
+
+
+
+create or replace procedure get_country_details
+(pcountry countries.country_name%type ,tab1 out type_pack.cur_type ) is
+  cursor c1 is select e.first_name, e.department_id, d.department_name, 
+  l.city, l.state_province, l.postal_code
+  from employees e join departments d on(e.department_id = d.department_id)
+  join locations l on(d.location_id = l.location_id) 
+  join countries c on(l.country_id = c.country_id)
+  where lower(c.country_name) = lower(pcountry);
+  i INTEGER := 1;
+begin
+  for x in c1
+  loop
+    tab1(i) := x;
+    i := i+1;
+  end loop;  
+end;
+
+declare
+  tab1 type_pack.cur_type;
+begin
+ get_country_details('united kingdom', tab1);
+  for x in 1..tab1.count
+  loop
+  dbms_output.put_line(tab1(x).first_name||' '|| tab1(x).department_id||' '|| tab1(x).department_name
+    ||' '|| tab1(x).city||' '|| tab1(x).state_province||' '|| tab1(x).postal_code);
+  end loop;
+end;
+
+-------
+1. Create a procedure which accepts a date and returns the empid, fullname, joining date, dept name and city of all employees who have joined before that date. Return the data using OUT mode parameter of array type
+
+create or replace package type_pack1 is 
+  type rec_type is RECORD 
+  (employee_id number(4), full_name varchar(50), hire_date date, department_name varchar(30), 
+  city varchar(30));
+  type tab_type is table of rec_type index by binary_integer;
+end type_pack1;
+
+
+
+create or replace procedure get_hdate_details
+(pdate date ,tab1 out type_pack1.tab_type) is
+  cursor c1 is select e.employee_id, e.first_name||' '|| e.last_name as full_name, e.hire_date,
+  d.department_name, l.city
+  from employees e join departments d on(e.department_id = d.department_id)
+  join locations l on(d.location_id = l.location_id) 
+  where e.hire_date < pdate;
+  i INTEGER := 1;
+begin
+  for x in c1
+  loop
+    tab1(i) := x;
+    i := i+1;
+  end loop;  
+end;
+
+declare
+  tab1 type_pack1.tab_type;
+begin
+ get_hdate_details('01-jan-09', tab1);
+  for x in 1..tab1.count
+  loop
+  dbms_output.put_line(tab1(x).employee_id||' '||tab1(x).full_name||' '|| tab1(x).hire_date||' '||
+  tab1(x).department_name||' '|| tab1(x).city);
+  end loop;
+  dbms_output.put_line(tab1.count||' employees ');
+end;
+
+
+create or replace type myobj is OBJECT
+(c1 number, c2 varchar(30)) ;
+
+create or replace type mytab is table of myobj;
+
+create or replace function get_coll RETURN mytab is
+  tab1 mytab := mytab();
+  i INTEGER := 1;
+  cursor c1 is select department_id, department_name from departments;
+begin
+  for x in c1
+  loop
+    tab1.extend;
+    tab1(i) := myobj(x.department_id, x.department_name);
+    i := i + 1;
+  end loop;
+  return tab1;
+end;
+
+declare
+  tab1 mytab := mytab();
+begin 
+  tab1 := get_coll;
+  for n in 1..tab1.count
+  loop 
+    dbms_output.put_line(tab1(n).c1||' '||tab1(n).c2);
+  end loop;
+end;
+
+
+declare
+  type array_type is table of number;
+  arr1 array_type := array_type(1,2,3,4,5);
+  i INTEGER;
+begin
+  i := arr1.count + 1;
+  for a in i..20
+  loop
+    arr1.extend;
+    arr1(i) := a;
+    i := i+1;
+  end loop;
+  for b in 1..arr1.count
+  loop
+  dbms_output.put_line(arr1(b));
+  end loop;
+end;
+
+declare
+  type varray_type is varray(107) of number;
+  arr1 varray_type := varray_type();
+  cursor c1 is  select salary from employees;
+  i INTEGER := 1;
+begin
+  for a in c1
+  loop
+    arr1.extend;
+    arr1(i) := a.salary;
+    i := i+1;
+  end loop;
+  for b in 1..arr1.count
+  loop
+  dbms_output.put_line(arr1(b));
+  end loop;
+end;
+
+create or replace type addr_obj is OBJECT
+(street varchar(10), city varchar(10), pcode number(6));
+
+create or replace type addr_tab is table of addr_obj;
+
+create or replace type contact_arr is varray(3) of number(10);
+
+create table customer 
+(custid number(4) primary key,
+custname varchar(15), 
+contact_num contact_arr,
+custaddr addr_tab)
+nested table custaddr store as c_addr;
+
+
+insert into customer values (1, 'ABC', contact_arr(32423523,45436346,3225235), 
+  addr_tab(addr_obj('F C Road','Pune',465547), 
+          addr_obj('Link Road','Mumbai', 453456)));
+
+
+insert into customer values (2, 'XYZ', contact_arr(386785845, 457686855,97474568), 
+  addr_tab(addr_obj('J M Road','Pune',747484), 
+          addr_obj('Fort','Delhi', 543670)));
+
+          
+select c.custid, c.custname, con.*, cadd.*
+from customer c,
+table(select contact_num from customer where custid = 1) con,
+table(select custaddr from customer where custid = 1) cadd
+where c.custid = 1;
+
+create or replace trigger msg_trig
+after insert or update or delete on regions
+begin
+  if inserting then
+  dbms_output.put_line('You added a region');
+  elsif updating then
+  dbms_output.put_line('You modified a region');
+  elsif deleting then
+  dbms_output.put_line('You deleted a region');
+  end if;
+end;
+
+create or replace trigger no_dml
+before insert or update or delete on countries
+begin
+  if to_char(sysdate, 'Dy') in ('Fri','Sat','Sun') then
+    raise_application_error(-20000, 'This table cannot be modified today... Please try again later');
+  end if;
+end;
+
+delete from countries where country_id = 'IN';
+
+Create a trigger which does not allow salary to be decreased
+
+
+create or replace trigger decr_sal
+before update of salary on employees
+for each row
+when (old.salary > new.salary) 
+begin
+  raise_application_error(-20001, 'Salary cannot be decreased');
+end;
+
+create a trigger which does not allow the AD_PRES (Admin President) to be deleted from employees table
+
+
+create table dept_copy as select * from departments where 1=2;
+
+select * from dept_copy;
+
+alter table dept_copy add(action varchar(10),  act_date date, user_name varchar(10));
+
+create or replace trigger audit_dept
+after insert or update or delete on departments
+for each row
+begin
+  if inserting then
+    insert into dept_copy values (:new.department_id, :new.department_name,
+    :new.manager_id, :new.location_id, 'Insert', sysdate, user);
+  elsif updating then
+     insert into dept_copy values (:old.department_id, :old.department_name,
+    :old.manager_id, :old.location_id, 'Update O', sysdate, user);
+       insert into dept_copy values (:new.department_id, :new.department_name,
+    :new.manager_id, :new.location_id, 'Update N', sysdate, user);
+  elsif deleting then
+    insert into dept_copy values (:old.department_id, :old.department_name,
+    :old.manager_id, :old.location_id, 'Delete', sysdate, user);
+  end if;
+end;
+
+insert into departments values(300, 'Sales',100, 1700)
+
+update departments set manager_id = 205 where department_id in (120, 140, 150, 160);
+
+exec pack1.del_dept(300)
+
+
+
+
+create or replace view v1
+as select e.employee_id, e.last_name, e.job_id, e.email, e.hire_date, e.department_id, 
+d.department_name
+from employees e join departments d
+on(e.department_id = d.department_id)
+
+select * from v1;
+
+insert into v1 values(1, 'A','ST_CLERK', 'S',sysdate, 300, 'XYZ');
+
+create or replace trigger instd_trig
+instead of insert on v1
+for each row
+begin
+  insert into departments (department_id, department_name)
+  values (:new.department_id, :new.department_name);
+  insert into employees (employee_id, last_name, job_id, email, hire_date, department_id)
+  values(:new.employee_id, :new.last_name, :new.job_id, :new.email, :new.hire_date, :new.department_id);
+end;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

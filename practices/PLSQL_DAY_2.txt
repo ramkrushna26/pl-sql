@@ -1,0 +1,77 @@
+---------------------------------------------------------------
+			PLSQL_DAY_2
+	**main use of plsql is procedures and fuctions**
+---------------------------------------------------------------
+> you should not use count(*) when using join
+	(use primary key) 
+---------------------------------------------------------------
+Unnamed Exception:
+
+> pragma : instruction to complier to follow corresponding instruction
+---------------------------------------------------------------
+Procedure:
+
+CREATE OR REPLACE PROCEDURE <PROC_NAME>
+(parameter_name mode datatypes) IS/AS
+	declaration;
+		-----
+BEGIN
+	executable statements;
+EXCEPTION
+	exception handling;
+END;
+---------------------------------------------------------------
+> Do not use substitution(&) varibales in stored programs
+
+> Avoid using anonymous blocks
+---------------------------------------------------------------
+Modes of the parameter:
+
+1. IN (default)
+2. OUT
+3. IN OUT
+---------------------------------------------------------------
+Functions:
+
+CREATE OR REPLACE FUNCTION <FUNCTION_NAME>
+(argument name mode datatype) RETURN datatype IS/AS
+	declarations;
+BEGIN
+	--------;
+	RETURN varibles;
+EXCEPTION
+	---------;
+END;
+---------------------------------------------------------------
+> function always return something
+
+> function can call in sql statements
+
+> not recommend to return more than one value in function
+
+> procedure may or may not return
+---------------------------------------------------------------
+Package:
+
+1. Specification : public
+
+2. Body : private
+---------------------------------------------------------------
+package pack_1 contains:
+	1. a number
+	2. procedure proc1();
+	3. functions func1();
+
+package body of pack_1: (all are private)
+	1. b numbers
+	2. procedure proc1() body
+	3. function func1() body
+---------------------------------------------------------------
+> select * from user_source --> contains the all information
+---------------------------------------------------------------
+
+---------------------------------------------------------------
+
+
+
+

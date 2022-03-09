@@ -1,0 +1,329 @@
+set serveroutput on
+Declare
+ vempid employees.employee_id%type := &vempid;
+ vfname employees.first_name%type; 
+ vlname vfname%type;
+ vsal employees.salary%type;
+begin
+  select first_name, last_name, salary
+  into vfname, vlname, vsal
+  from employees where employee_id = vempid;
+  dbms_output.put_line(vempid||' '|| vfname||' '|| vlname||' '||vsal);
+end;
+
+
+--------------
+Declare
+ vempid employees.employee_id%type := &vempid;
+ vemprec employees%rowtype; 
+begin
+  select *  into vemprec
+  from employees where employee_id = vempid;
+  dbms_output.put_line(vempid||' '|| vemprec.first_name||' '|| vemprec.manager_id
+  ||' '|| vemprec.email||' '|| vemprec.department_id);
+end;
+--------------
+set serveroutput on
+--print the deptname and city of a given empid
+Declare
+   vempid employees.employee_id%type := &vempid;
+  vdname departments.department_name%type;
+  vcity locations.city%type;
+begin
+  select d.department_name, l.city  into vdname, vcity
+  from employees e join departments d on(e.department_id = d.department_id)
+  join locations l on(d.location_id = l.location_id)
+  where e.employee_id = vempid;
+  dbms_output.put_line(vempid||' works in '|| vdname||' in  '|| vcity);
+end;
+-----------
+Declare
+ vempid employees.employee_id%type := &vempid;
+ vfname employees.first_name%type; 
+ vlname vfname%type;
+ vsal employees.salary%type;
+ vjob employees.job_id%type;
+begin
+  select first_name, last_name, salary, job_id
+  into vfname, vlname, vsal, vjob
+  from employees where employee_id = vempid;
+  dbms_output.put_line(vempid||' '|| vfname||' '|| vlname||' '|| vjob);
+  dbms_output.put_line('Current Salary '|| vsal);
+  if lower(vjob) like '%clerk' then
+    vsal := vsal + 1000;
+  elsif lower(vjob) like '%man' then
+    vsal := vsal + 2000;
+  elsif lower(vjob) like '%prog' or lower(vjob) like '%rep'  then
+    vsal := vsal + 3000;
+  else
+    vsal := vsal + 500;
+  end if;
+  --update employees set salary = vsal where employee_id = vempid;
+  dbms_output.put_line('Estimated New Salary '|| vsal);
+end;
+------------
+Declare
+  vname VARCHAR2(10) := '&name';
+  i INTEGER := 1;
+begin
+  loop
+  dbms_output.put_line('Hello '|| vname);
+  exit when i>4;
+  i := i + 1;
+  end loop;
+  dbms_output.put_line('Out of Loop');
+end;
+
+1. Write a block to print the names, designation, joining date of a given empid.
+
+2. Write a block which accepts a number between 5 and 20 and prints the following output upto that number
+
+Eg number is 5
+1	5
+2	4
+3	3
+4	2
+5	1
+
+Print 'Number out of range' if number is not between 5 and 20
+
+
+declare
+  cursor c1 is select employee_id, first_name, salary from employees;
+  vempid employees.employee_id%type;
+  vfname employees.first_name%type;
+  vsal employees.salary%type;
+begin
+  open c1;
+  loop
+    fetch c1 into vempid, vfname, vsal;
+    exit when c1%notfound;
+    dbms_output.put_line(vempid||' '||vfname||' '||vsal);
+  end loop;
+  close c1;
+end;
+----------------------
+declare
+  cursor c1 is select employee_id, first_name, salary from employees;
+  vempid employees.employee_id%type;
+  vfname employees.first_name%type;
+  vsal employees.salary%type;
+begin
+  open c1;
+  loop
+    fetch c1 into vempid, vfname, vsal;
+    exit when c1%notfound;
+    dbms_output.put_line(vempid||' '||vfname||' '||vsal);
+  end loop;
+  dbms_output.put_line(c1%rowcount||' rows fetched from cursor');
+  close c1;
+end;
+
+----------
+begin
+update employees set salary = salary where department_id = &deptid;
+dbms_output.put_line(SQL%rowcount||' records modified');
+DELETE  from employees where job_id = 'ST_CLERK';
+dbms_output.put_line(SQL%rowcount||' records deleted');
+end;
+--------
+
+declare
+  cursor c1 is select * from employees ;
+  vemprec employees%rowtype;
+begin
+  open c1;
+  loop
+    fetch c1 into vemprec;
+    exit when c1%notfound;
+    dbms_output.put_line(vemprec.employee_id||' '|| vemprec.first_name||' '|| vemprec.last_name);
+  end loop;
+  --dbms_output.put_line(c1%rowcount||' emp report to '|| vmgr);
+  close c1;
+end;
+
+
+
+
+3. Write a block to accept a managerid at runtime and print the empid, firstname and deptid of the emp who report to that managerid
+
+4. Write a block to accept the name of a country and print the firstname, deptid, deptname, city, state and postal code of all employees working in that country. If no employees work in the given country then print 'No employees found in this country'
+
+
+--Explicit cursor with record variables
+declare
+  vcountry countries.country_name%type := '&country';
+  cursor c1 is select e.first_name, e.department_id, d.department_name, 
+  l.city, l.state_province, l.postal_code
+  from employees e join departments d on(e.department_id = d.department_id)
+  join locations l on(d.location_id = l.location_id) 
+  join countries c on(l.country_id = c.country_id)
+  where lower(c.country_name) = lower(vcountry);
+  vfname employees.first_name%type;
+  vdeptid employees.department_id%type;
+  vdname departments.department_name%type ;
+  vcity locations.city%type;
+  vstate locations.state_province%type;
+  vpcode locations.postal_code%type;
+begin
+  open c1;
+  loop
+    fetch c1 into vfname, vdeptid, vdname, vcity, vstate, vpcode;
+    exit when c1%notfound;
+    dbms_output.put_line(vfname||' '|| vdeptid||' '|| vdname||' '|| vcity||' '|| 
+    vstate||' '|| vpcode);
+  end loop;
+  if c1%rowcount = 0 then
+    dbms_output.put_line('No emp found in '|| vcountry);
+  else
+    dbms_output.put_line(c1%rowcount||' emp work in  '|| vcountry);
+  end if;
+  close c1;
+end;
+
+----------------
+--Explicit cursor with record variables
+declare
+  vcountry countries.country_name%type := '&country';
+  cursor c1 is select e.first_name, e.department_id, d.department_name, 
+  l.city, l.state_province, l.postal_code
+  from employees e join departments d on(e.department_id = d.department_id)
+  join locations l on(d.location_id = l.location_id) 
+  join countries c on(l.country_id = c.country_id)
+  where lower(c.country_name) = lower(vcountry);
+begin
+  for x in c1
+  loop
+    dbms_output.put_line(x.first_name||' '|| x.department_id||' '|| x.department_name
+    ||' '|| x.city||' '|| x.state_province||' '|| x.postal_code);
+  end loop;  
+end;
+
+---------------
+--Explicit cursor with record variables
+declare
+  vcountry countries.country_name%type := '&country';
+  cursor c1 is select e.first_name, e.department_id, d.department_name, 
+  l.city, l.state_province, l.postal_code
+  from employees e join departments d on(e.department_id = d.department_id)
+  join locations l on(d.location_id = l.location_id) 
+  join countries c on(l.country_id = c.country_id)
+  where lower(c.country_name) = lower(vcountry);
+  i INTEGER := 0;
+begin
+  for x in c1
+  loop
+    dbms_output.put_line(x.first_name||' '|| x.department_id||' '|| x.department_name
+    ||' '|| x.city||' '|| x.state_province||' '|| x.postal_code);
+    i := c1%rowcount;
+  end loop; 
+  if i = 0 then
+    dbms_output.put_line('No emp found in '|| vcountry);
+  else
+    dbms_output.put_line(i||' emp work in  '|| vcountry);
+  end if;
+end;
+
+Declare
+  cursor c1 is select employee_id, first_name, job_id, salary from employees
+  for update of salary nowait;
+ vsal employees.salary%type;
+begin
+  for a in c1
+  loop
+  dbms_output.put_line(a.employee_id||' '|| a.first_name||' '||a.job_id);
+  dbms_output.put_line('Current Salary '|| a.salary);
+  if lower(a.job_id) like '%clerk' then
+    vsal := a.salary + 1000;
+  elsif lower(a.job_id) like '%man' then
+    vsal := a.salary + 2000;
+  elsif lower(a.job_id) like '%prog' or lower(a.job_id) like '%rep'  then
+    vsal := a.salary + 3000;
+  else
+    vsal := a.salary + 500;
+  end if;
+  update employees set salary = vsal where current of c1;
+  dbms_output.put_line('Updated New Salary '|| vsal);
+  end loop;
+end;
+
+------------
+set serveroutput on
+Declare
+ vempid employees.employee_id%type ;
+ vfname employees.first_name%type; 
+ vlname vfname%type;
+ vsal employees.salary%type;
+begin
+  vempid := &vempid;
+  select first_name, last_name, salary
+  into vfname, vlname, vsal
+  from employees where department_id = vempid;
+  dbms_output.put_line(vempid||' '|| vfname||' '|| vlname||' '||vsal);
+EXCEPTION 
+  when no_data_found then
+    dbms_output.put_line('No such employee found');
+  when too_many_rows then
+    dbms_output.put_line('Multiple rows selected'); 
+  when others then
+    dbms_output.put_line('Error in execution...  '||sqlerrm); 
+end;
+ 
+----------------
+set serveroutput on
+Declare
+ vempid employees.employee_id%type ;
+ vfname employees.first_name%type; 
+ vlname vfname%type;
+ vsal employees.salary%type;
+begin
+  vempid := &vempid;
+  select first_name, last_name, salary
+  into vfname, vlname, vsal
+  from employees where department_id = vempid;
+  dbms_output.put_line(vempid||' '|| vfname||' '|| vlname||' '||vsal);
+EXCEPTION 
+  when no_data_found then
+    dbms_output.put_line('No such employee found');
+  when too_many_rows then
+    dbms_output.put_line('Multiple rows selected'); 
+  when others then
+    dbms_output.put_line('Error in execution...  '||sqlerrm(sqlcode)); 
+    dbms_output.put_line(dbms_utility.format_error_backtrace); 
+end;
+
+ ____________________
+create or replace procedure inc_sal
+(psal in out number, inc_percent NUMBER) is
+begin
+  psal := psal + psal * inc_percent/100;
+end;
+________________
+declare
+  vempid number := &empid;
+  vfname varchar(25);
+  vlname varchar(25);
+  vsal number;
+  vdname varchar(30);
+  vcity varchar(30);
+begin
+ get_name_sal(vempid, vfname, vlname, vsal);
+ get_dname_city(vempid, vdname, vcity);
+ dbms_output.put_line(vempid||' '||vfname||' '||vlname||' '||vdname||' '||vcity);
+ dbms_output.put_line('Current Salary '||vsal);
+ inc_sal(vsal, 10);
+ dbms_output.put_line('New Salary '||vsal);
+end;
+________________
+create or replace function calc_annual_Sal
+(pempid NUMBER) RETURN NUMBER is
+  vannual_sal NUMBER;
+begin
+  select salary * 12 into vannual_sal FROM employees 
+  where employee_id = pempid;
+  RETURN vannual_sal;
+exception
+  when no_data_found then
+  return 0;
+end;
+_________________________-
