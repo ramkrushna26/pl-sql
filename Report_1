@@ -1,0 +1,19 @@
+set pages 0;
+set lines 450;
+set feedback off;
+set trimspool on;
+set termout off;
+set heading off;
+set feedback off;
+set pagesize 0;
+set echo off;
+set newpage none;
+set colsep "|";
+
+spool <file> append
+select 'Name|Emp_id|Dept|Location'
+from dual;
+
+select Name||'|'||Emp_id||'|'||Dept||'|'||Location
+from table
+where dept = '';
